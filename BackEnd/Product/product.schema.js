@@ -28,6 +28,24 @@ const productSchema = new Schema(
       ref: "Category",
       required: true,
     },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+    reviews: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Review",
+      },
+    ],
+    rating: {
+      type: Number,
+      default: 0,
+    },
+    numReviews: {
+      type: Number,
+      default: 0,
+    }
   },
   { timestamps: true }
 );

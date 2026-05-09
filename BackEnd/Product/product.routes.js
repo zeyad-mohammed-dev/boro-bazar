@@ -5,6 +5,7 @@ import {
   getProductById,
   updateProduct,
   deleteProduct,
+  getPopularProducts
 } from "./product.controller.js";
 import { fileUpload, filterObject } from "../utils/multer.js";
 
@@ -19,7 +20,8 @@ router.post(
 
 /////////////////(GetProducts)\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 router.get("/", getProducts);
-
+////////////////(GetPopularProducts)\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+router.get("/popular", getPopularProducts);
 /////////////////(GetSingleProduct)\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 router.get("/:productId", getProductById);
 

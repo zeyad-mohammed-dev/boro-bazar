@@ -2,7 +2,25 @@ import Review from './review.schema.js';
 import CustomError from '../utils/customError.js';
 import mongoose from 'mongoose';
 import asyncHandler from '../utils/asyncHandler.js';
+import Product from '../Product/product.schema.js';
 
+
+const updateProductRating = async (productId) => {
+
+  const reviews = await Review.find({ productId });
+
+  const numReviews = reviews.length;
+
+  const rating =
+    numReviews > 0
+      ? reviews.reduce((acc, r) => acc + r.rating, 0) / numReviews
+      : 0;
+
+  await Product.findByIdAndUpdate(productId, {
+    rating,
+    numReviews,
+  });
+};
 ////////////////////////////
 // Create Review
 ////////////////////////////
@@ -38,6 +56,15 @@ export const createReview = asyncHandler(async (req, res, next) => {
     productId,
   });
 
+  if (review) {
+    const product = await Product.findById(productId);
+    if (product) {
+      product.reviews.push(review._id);
+      await product.save();
+    }
+
+    await updateProductRating(productId);
+  }
   res.status(201).json({
     success: true,
     data: review,
@@ -102,6 +129,8 @@ export const updateReview = asyncHandler(async (req, res, next) => {
 
   await review.save();
 
+  await updateProductRating(review.productId);
+
   res.status(200).json({
     success: true,
     data: review,
@@ -127,7 +156,7 @@ export const deleteReview = asyncHandler(async (req, res, next) => {
   }
 
   await review.deleteOne();
-
+  await updateProductRating(review.productId);
   res.status(200).json({
     success: true,
     message: 'Review deleted successfully',

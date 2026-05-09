@@ -5,7 +5,7 @@ import CustomError from "../utils/customError.js";
 import mongoose from "mongoose";
 import asyncHandler from "../utils/asyncHandler.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
-
+import Review from "../Reviews/review.schema.js";
 ////////////////////////////
 // Create Product
 ////////////////////////////
@@ -48,16 +48,60 @@ export const createProduct = asyncHandler(async (req, res, next) => {
 // Get Products
 ////////////////////////////
 export const getProducts = asyncHandler(async (req, res) => {
+
   const filter = {};
-  if (req.query.categoryId) {
+  const sortOptions = {};
+
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 12;
+
+  const skip = (page - 1) * limit;
+
+  if (
+    req.query.categoryId &&
+    mongoose.Types.ObjectId.isValid(req.query.categoryId)
+  ) {
     filter.categoryId = req.query.categoryId;
   }
 
-  const products = await Product.find(filter).populate("categoryId", "name slug image");
+  if (req.query.sort) {
 
+    if (req.query.sort === "featured") {
+      filter.isFeatured = true;
+    }
+
+    if (req.query.sort === "price-desc") {
+      sortOptions.price = -1;
+    }
+
+    if (req.query.sort === "price-asc") {
+      sortOptions.price = 1;
+    }
+
+    if (req.query.sort === "latest") {
+      sortOptions.createdAt = -1;
+    }
+  }
+
+  const products = await Product.find(filter)
+    .sort(sortOptions)
+    .skip(skip)
+    .limit(limit)
+    .populate("categoryId", "name slug image");
+
+  const count = await Product.countDocuments(filter);
+  const totalPages = Math.ceil(count / limit);
+
+  if (page > totalPages) {
+    return next(new CustomError("Page not found!", 404));
+  }
   res.status(200).json({
     success: true,
     results: products.length,
+    count,
+    totalPages,
+    page,
+    limit,
     data: products,
   });
 });
@@ -105,10 +149,10 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
   if (description) product.description = description;
   if (price) product.price = price;
   if (categoryId) {
-      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-        return next(new CustomError("Invalid category ID", 400));
-      }
-      product.categoryId = categoryId;
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return next(new CustomError("Invalid category ID", 400));
+    }
+    product.categoryId = categoryId;
   }
 
   if (req.file) {
@@ -157,3 +201,36 @@ export const deleteProduct = asyncHandler(async (req, res, next) => {
     message: "Product deleted successfully",
   });
 });
+////////////////////////////
+// Get Popular Products
+////////////////////////////
+export const getPopularProducts = asyncHandler(async (req, res) => {
+
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 12;
+  const skip = (page - 1) * limit;
+
+  const filter = {
+    rating: { $gte: 4.5 },
+    numReviews: { $gte: 5 }
+  };
+
+  const products = await Product.find(filter)
+    .populate("categoryId", "name slug image")
+    .sort({ rating: -1, numReviews: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const count = await Product.countDocuments(filter);
+  const totalPages = Math.ceil(count / limit);
+
+  res.status(200).json({
+    success: true,
+    results: products.length,
+    count,
+    page,
+    totalPages,
+    data: products,
+  });
+});
+////////////////////////////
