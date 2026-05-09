@@ -47,7 +47,7 @@ export const createProduct = asyncHandler(async (req, res, next) => {
 ////////////////////////////
 // Get Products
 ////////////////////////////
-export const getProducts = asyncHandler(async (req, res) => {
+export const getProducts = asyncHandler(async (req, res,next) => {
 
   const filter = {};
   const sortOptions = {};
@@ -92,9 +92,6 @@ export const getProducts = asyncHandler(async (req, res) => {
   const count = await Product.countDocuments(filter);
   const totalPages = Math.ceil(count / limit);
 
-  if (page > totalPages) {
-    return next(new CustomError("Page not found!", 404));
-  }
   res.status(200).json({
     success: true,
     results: products.length,
